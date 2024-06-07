@@ -1,10 +1,6 @@
 package com.example;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 public class PathORAM {
     private static final int BUCKET_SIZE = 4;
@@ -21,29 +17,52 @@ public class PathORAM {
         }
     }
 
-    private static String generateKey(int[] arrayref, int index) {
+    private static String generateKey(Object arrayref, int index) {
         return System.identityHashCode(arrayref) + "_" + index;
     }
 
-    public static int read(int[] arrayref, int arrayidx) {
+    public static int readIntArray(int[] arrayref, int arrayidx) {
+        return read(arrayref, arrayidx, 0);
+    }
+
+    public static void writeIntArray(int[] arrayref, int arrayidx, int value) {
+        write(arrayref, arrayidx, value);
+    }
+
+    public static float readFloatArray(float[] arrayref, int arrayidx) {
+        return read(arrayref, arrayidx, 0.0f);
+    }
+
+    public static void writeFloatArray(float[] arrayref, int arrayidx, float value) {
+        write(arrayref, arrayidx, value);
+    }
+
+    public static Object readObjectArray(Object[] arrayref, int arrayidx) {
+        return read(arrayref, arrayidx, null);
+    }
+
+    public static void writeObjectArray(Object[] arrayref, int arrayidx, Object value) {
+        write(arrayref, arrayidx, value);
+    }
+
+    private static <T> T read(Object arrayref, int arrayidx, T defaultValue) {
         String key = generateKey(arrayref, arrayidx);
         System.out.println("Reading " + key);
         Integer leaf = positionMap.get(key);
         if (leaf == null) {
-            return 0; // TODO: Handle not in tree
+            return defaultValue;
         }
 
         List<Block> path = accessPath(leaf);
         for (Block block : path) {
-            System.out.println("Block " + block.key);
             if (block != null && block.key.equals(key)) {
-                return block.value;
+                return (T) block.value;
             }
         }
-        return 0; // TODO: Handle not in tree
+        return defaultValue;
     }
 
-    public static void write(int[] arrayref, int arrayidx, int value) {
+    private static <T> void write(Object arrayref, int arrayidx, T value) {
         String key = generateKey(arrayref, arrayidx);
         Integer leaf = positionMap.computeIfAbsent(key, k -> random.nextInt(1 << HEIGHT));
         List<Block> path = accessPath(leaf);
@@ -87,9 +106,9 @@ public class PathORAM {
 
     private static class Block {
         String key;
-        int value;
+        Object value;
 
-        Block(String key, int value) {
+        Block(String key, Object value) {
             this.key = key;
             this.value = value;
         }
