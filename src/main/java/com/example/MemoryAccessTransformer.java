@@ -27,6 +27,9 @@ public class MemoryAccessTransformer {
               case IALOAD:
                 mv.visitMethodInsn(Opcodes.INVOKESTATIC, "com/example/PathORAM", "read", "([II)I", false);
                 break;
+              case IASTORE:
+                mv.visitMethodInsn(Opcodes.INVOKESTATIC, "com/example/PathORAM", "write", "([III)V", false);
+                break;
               default:
                 super.visitInsn(opcode);
                 break;
