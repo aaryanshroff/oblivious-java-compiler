@@ -1,23 +1,21 @@
-# Makefile for Maven Java Project
-
 # Variables
 MAVEN_EXEC = mvn
-JAVA_MAIN_CLASS = com.example.TransformerTest
 
-.PHONY: all clean compile run
+.PHONY: all clean transform run
 
-all: compile run
+all: compile transform run
 
-# Maven targets
 compile:
-	$(MAVEN_EXEC) compile
+	$(MAVEN_EXEC) clean compile
 
-run: compile
-	$(MAVEN_EXEC) exec:java -Dexec.mainClass=$(JAVA_MAIN_CLASS)
+# Run the MemoryAccessTransformer to transform the bytecode
+transform: compile
+	$(MAVEN_EXEC) exec:java -Dexec.mainClass="com.example.MemoryAccessTransformer"
+
+# Run the transformed class
+run: transform
+	java -cp target/classes com.example.App
 
 clean:
 	$(MAVEN_EXEC) clean
-	rm -f target/classes/com/example/YourClassToTransform.class
-	rm -f target/classes/com/example/PathORAM.class
-	rm -f target/classes/com/example/MemoryAccessTransformer.class
-	rm -f target/classes/com/example/TransformerTest.class
+	rm -rf target
