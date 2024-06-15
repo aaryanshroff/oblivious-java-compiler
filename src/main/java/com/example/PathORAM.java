@@ -1,116 +1,87 @@
 package com.example;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Random;
 
 public class PathORAM {
-    private static final int BUCKET_SIZE = 4;
-    private static final int HEIGHT = 4;
+  private final static int BUCKET_SIZE = 4;
+  private final List<Bucket> tree = new ArrayList<>();
+  private final HashMap<String, Integer> positionMap = new HashMap<>();
+  private final List<Block> stash = new ArrayList<>();
+  private final Random random = new Random();
 
-    private static final Map<String, Integer> positionMap = new HashMap<>();
-    private static final List<Bucket> storage = new ArrayList<>();
-    private static final Random random = new Random();
+  private final int treeHeight = 4;
 
-    static {
-        // Initialize the tree with empty buckets
-        for (int i = 0; i < (1 << (HEIGHT + 1)) - 1; i++) {
-            storage.add(new Bucket());
+  public byte[] access(String blockId, byte[] newData, boolean isWrite) {
+    // Step 1: Remap block
+    int prevBlockPos = positionMap.get(blockId);
+    positionMap.put(blockId, random.nextInt(1 << (treeHeight - 1)));
+
+    // Step 2: Read path
+    List<Block> blocksOnPath = readPath(prevBlockPos);
+
+    // Step 3: Update block
+    if (isWrite) {
+      // TODO
+    }
+
+    // TODO
+    writePath(prevBlockPos);
+
+    return null;
+  }
+
+  private List<Block> readPath(int leafPos) {
+    List<Block> blocksOnPath = new ArrayList<>();
+    for (int level = 0; level < treeHeight; level++) {
+      int bucketIdx = computeIdxOfBucketOnThisLevelOnPathToLeaf(level, leafPos);
+      blocksOnPath.addAll(tree.get(bucketIdx).popAllBlocks());
+    }
+    return blocksOnPath;
+  }
+
+  private void writePath(int leafPos) {
+    for (int level = treeHeight - 1; level >= 0; level--) {
+      int idxOfBucketOnThisLevelOnPathToLeaf = computeIdxOfBucketOnThisLevelOnPathToLeaf(level, leafPos)
+      for (Block stashBlock : stash) {
+        // stashBlock can be added to the bucket at this level (on the
+        // path to leafPos) only if the bucket at this level on the path to the block's
+        // leaf is the same
+        if (idxOfBucketOnThisLevelOnPathToLeaf == computeIdxOfBucketOnThisLevelOnPathToLeaf(level, stashBlock.)) {
+
         }
+      }
+    }
+  }
+
+  private int computeIdxOfBucketOnThisLevelOnPathToLeaf(int level, int leafPos) {
+    return (leafPos + (1 << (treeHeight - 1))) >> (treeHeight - 1 - level);
+  }
+
+  private static class Block {
+    private String id;
+    private byte[] data;
+
+    Block(String id, byte[] data) {
+      this.id = id;
+      this.data = data;
+    }
+  }
+
+  private static class Bucket {
+    List<Block> blocks;
+
+    Bucket() {
+      this.blocks = new ArrayList<>(BUCKET_SIZE);
     }
 
-    private static String generateKey(Object arrayref, int index) {
-        return System.identityHashCode(arrayref) + "_" + index;
+    public List<Block> popAllBlocks() {
+      List<Block> blocks = this.blocks;
+      this.blocks.clear();
+      return blocks;
     }
-
-    public static int readIntArray(int[] arrayref, int arrayidx) {
-        return read(arrayref, arrayidx, 0);
-    }
-
-    public static void writeIntArray(int[] arrayref, int arrayidx, int value) {
-        write(arrayref, arrayidx, value);
-    }
-
-    public static float readFloatArray(float[] arrayref, int arrayidx) {
-        return read(arrayref, arrayidx, 0.0f);
-    }
-
-    public static void writeFloatArray(float[] arrayref, int arrayidx, float value) {
-        write(arrayref, arrayidx, value);
-    }
-
-    public static Object readObjectArray(Object[] arrayref, int arrayidx) {
-        return read(arrayref, arrayidx, null);
-    }
-
-    public static void writeObjectArray(Object[] arrayref, int arrayidx, Object value) {
-        write(arrayref, arrayidx, value);
-    }
-
-    private static <T> T read(Object arrayref, int arrayidx, T defaultValue) {
-        String key = generateKey(arrayref, arrayidx);
-        System.out.println("Reading " + key);
-        Integer leaf = positionMap.get(key);
-        if (leaf == null) {
-            return defaultValue;
-        }
-
-        List<Block> path = accessPath(leaf);
-        for (Block block : path) {
-            if (block != null && block.key.equals(key)) {
-                return (T) block.value;
-            }
-        }
-        return defaultValue;
-    }
-
-    private static <T> void write(Object arrayref, int arrayidx, T value) {
-        String key = generateKey(arrayref, arrayidx);
-        Integer leaf = positionMap.computeIfAbsent(key, k -> random.nextInt(1 << HEIGHT));
-        List<Block> path = accessPath(leaf);
-        Block newBlock = new Block(key, value);
-
-        for (int i = 0; i < path.size(); i++) {
-            if (path.get(i) != null && path.get(i).key.equals(key)) {
-                path.set(i, null);
-                break;
-            }
-        }
-
-        path.add(newBlock);
-        positionMap.put(key, random.nextInt(1 << HEIGHT));
-
-        for (int i = HEIGHT; i >= 0; i--) {
-            int index = (leaf >> i) + (1 << i) - 1;
-            storage.get(index).blocks.clear();
-            for (int j = 0; j < BUCKET_SIZE && !path.isEmpty(); j++) {
-                storage.get(index).blocks.add(path.remove(0));
-            }
-        }
-    }
-
-    private static List<Block> accessPath(int leaf) {
-        List<Block> path = new ArrayList<>();
-        for (int i = 0; i <= HEIGHT; i++) {
-            int index = (leaf >> i) + (1 << i) - 1;
-            path.addAll(storage.get(index).blocks);
-        }
-        return path;
-    }
-
-    private static class Bucket {
-        List<Block> blocks;
-
-        Bucket() {
-            this.blocks = new ArrayList<>(BUCKET_SIZE);
-        }
-    }
-
-    private static class Block {
-        String key;
-        Object value;
-
-        Block(String key, Object value) {
-            this.key = key;
-            this.value = value;
-        }
-    }
+  }
 }
