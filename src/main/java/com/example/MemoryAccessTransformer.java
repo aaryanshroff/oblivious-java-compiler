@@ -135,22 +135,58 @@ public class MemoryAccessTransformer {
       public MethodVisitor visitMethod(int access, String name, String descriptor, String signature,
           String[] exceptions) {
         return new MethodVisitor(ASM9) {
+          private int stackSize = 0;
+
           @Override
           public void visitIntInsn(int opcode, int operand) {
-            if (opcode == NEWARRAY || opcode == ANEWARRAY) {
-              totalArrayElements += operand;
+            if (opcode == BIPUSH || opcode == SIPUSH) {
+              stackSize = operand;
+            } else if (opcode == NEWARRAY) {
+              if (stackSize > 0) {
+                totalArrayElements += stackSize;
+                stackSize = 0;
+              }
             }
             super.visitIntInsn(opcode, operand);
           }
 
           @Override
-          public void visitMultiANewArrayInsn(String descriptor, int numDimensions) {
-            // This is a simplification. For multi-dimensional arrays, we'd need to parse
-            // the descriptor
-            // and calculate the total number of elements based on all dimensions.
-            totalArrayElements += 1;
-            super.visitMultiANewArrayInsn(descriptor, numDimensions);
+          public void visitTypeInsn(int opcode, String type) {
+            if (opcode == ANEWARRAY) {
+              if (stackSize > 0) {
+                totalArrayElements += stackSize;
+                stackSize = 0;
+              }
+            }
+            super.visitTypeInsn(opcode, type);
           }
+
+          @Override
+          public void visitInsn(int opcode) {
+            if (opcode >= ICONST_0 && opcode <= ICONST_5) {
+              stackSize = opcode - ICONST_0;
+            } else if (opcode == ICONST_M1) {
+              stackSize = -1;
+            }
+            super.visitInsn(opcode);
+          }
+
+          @Override
+          public void visitLdcInsn(Object value) {
+            if (value instanceof Integer) {
+              stackSize = (Integer) value;
+            }
+            super.visitLdcInsn(value);
+          }
+
+          @Override
+          public void visitVarInsn(int opcode, int var) {
+            if (opcode == ILOAD) {
+              stackSize = -1; // We don't know the exact size, but it's on the stack
+            }
+            super.visitVarInsn(opcode, var);
+          }
+
         };
       }
     };
