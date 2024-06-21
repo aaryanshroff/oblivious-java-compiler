@@ -6,7 +6,11 @@ import java.util.Optional;
 import java.util.function.Function;
 
 public class ORAMAccessHelper {
-  private static final PathORAM oram = new PathORAM(); // Assuming PathORAM has a no-arg constructor
+  private static PathORAM oram; // Assuming PathORAM has a no-arg constructor
+
+  public static void initializeORAM(int numBlocks) {
+    oram = new PathORAM(numBlocks);
+  }
 
   private static String getBlockId(Object obj, String identifier) {
     return obj.hashCode() + "_" + identifier;
