@@ -4,15 +4,26 @@ import org.objectweb.asm.*;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.objectweb.asm.Opcodes.*;
 
 public class MemoryAccessTransformer {
-  public static void main(String[] args) throws IOException {
-    String className = "com/example/App";
-    byte[] classBytes = Files.readAllBytes(Paths.get("target/classes/" + className.replace('.', '/') + ".class"));
+  private static int totalArrayElements = 0;
+  private static Set<String> uniqueFields = new HashSet<>();
+
+  public static void transformClass(String className, byte[] classBytes) throws IOException {
+    // First pass: count array elements and unique fields
+    countArrayElementsAndFields(classBytes);
+
+    // Calculate the total number of blocks needed
+    int numBlocks = totalArrayElements + uniqueFields.size();
+
+    // Initialize PathORAM with the counted number of blocks
+    ORAMAccessHelper.initializeORAM(numBlocks);
+
+    // Second pass: transform the class
     ClassReader classReader = new ClassReader(classBytes);
     ClassWriter classWriter = new ClassWriter(classReader, ClassWriter.COMPUTE_FRAMES);
     ClassVisitor classVisitor = new ClassVisitor(ASM9, classWriter) {
@@ -111,18 +122,38 @@ public class MemoryAccessTransformer {
     }
   }
 
-  public static void transformClass(String className) throws IOException {
-    String classPath = className.replace('.', '/') + ".class";
-    byte[] classBytes = Files.readAllBytes(Paths.get("target/test-classes/" + classPath));
+  private static void countArrayElementsAndFields(byte[] classBytes) {
     ClassReader classReader = new ClassReader(classBytes);
-    ClassWriter classWriter = new ClassWriter(classReader, ClassWriter.COMPUTE_FRAMES);
-    ClassVisitor classVisitor = new ClassVisitor(ASM9, classWriter) {
-      // ... existing visitor code ...
+    ClassVisitor classVisitor = new ClassVisitor(ASM9) {
+      @Override
+      public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
+        uniqueFields.add(name);
+        return super.visitField(access, name, descriptor, signature, value);
+      }
+
+      @Override
+      public MethodVisitor visitMethod(int access, String name, String descriptor, String signature,
+          String[] exceptions) {
+        return new MethodVisitor(ASM9) {
+          @Override
+          public void visitIntInsn(int opcode, int operand) {
+            if (opcode == NEWARRAY || opcode == ANEWARRAY) {
+              totalArrayElements += operand;
+            }
+            super.visitIntInsn(opcode, operand);
+          }
+
+          @Override
+          public void visitMultiANewArrayInsn(String descriptor, int numDimensions) {
+            // This is a simplification. For multi-dimensional arrays, we'd need to parse
+            // the descriptor
+            // and calculate the total number of elements based on all dimensions.
+            totalArrayElements += 1;
+            super.visitMultiANewArrayInsn(descriptor, numDimensions);
+          }
+        };
+      }
     };
     classReader.accept(classVisitor, 0);
-    byte[] transformedClassBytes = classWriter.toByteArray();
-    try (FileOutputStream fos = new FileOutputStream("target/test-classes/" + classPath)) {
-      fos.write(transformedClassBytes);
-    }
   }
 }

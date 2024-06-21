@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class MemoryAccessTransformerTest {
 
@@ -13,12 +15,16 @@ public class MemoryAccessTransformerTest {
 
   @BeforeAll
   public static void setup() throws IOException {
+    String className = "com.example.TestClass";
+    String classPath = className.replace('.', '/') + ".class";
+    byte[] classBytes = Files.readAllBytes(Paths.get("target/test-classes/" + classPath));
+
     // Transform the TestClass
-    MemoryAccessTransformer.transformClass("com.example.TestClass");
+    MemoryAccessTransformer.transformClass(className, classBytes);
 
     // Load the transformed class
     try {
-      transformedClass = Class.forName("com.example.TestClass");
+      transformedClass = Class.forName(className);
     } catch (ClassNotFoundException e) {
       fail("Failed to load transformed class: " + e.getMessage());
     }
