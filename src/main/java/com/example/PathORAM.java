@@ -13,13 +13,23 @@ public class PathORAM {
   private final HashMap<String, Integer> positionMap = new HashMap<>();
   private final HashMap<String, Block> stash = new HashMap<>();
   private final Random random = new Random();
+  private int treeHeight;
 
-  private final int treeHeight = 4;
+  public PathORAM(int numBlocks) {
+    this.treeHeight = (int) Math.ceil(Math.log(numBlocks) / Math.log(2));
 
-  public PathORAM() {
-    int numBuckets = (1 << treeHeight) - 1;
+    int numBuckets = (1 << (treeHeight + 1)) - 1;
+
+    // Initialize the tree with empty buckets
     for (int i = 0; i < numBuckets; i++) {
       tree.add(new Bucket());
+    }
+
+    // Initialize the position map for each block
+    for (int i = 0; i < numBlocks; i++) {
+      String blockId = String.valueOf(i);
+      int leafIndex = random.nextInt(1 << treeHeight);
+      positionMap.put(blockId, leafIndex);
     }
   }
 
