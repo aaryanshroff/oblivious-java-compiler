@@ -1,7 +1,7 @@
 # Variables
 MAVEN_EXEC = mvn
 
-.PHONY: all clean transform run
+.PHONY: all clean transform run test
 
 all: compile transform run
 
@@ -15,6 +15,10 @@ transform: compile
 # Run the transformed class
 run: transform
 	java -cp target/classes com.example.App
+
+# Run tests
+test:
+	$(MAVEN_EXEC) test
 
 clean:
 	$(MAVEN_EXEC) clean
