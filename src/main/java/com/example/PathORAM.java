@@ -32,10 +32,15 @@ public class PathORAM {
     readPath(prevBlockPos);
 
     // Step 3: Update block
+    Block block = stash.getOrDefault(blockId, new Block(blockId, Optional.empty()));
+    Optional<byte[]> response = block.data;
+
     if (isWrite) {
-      stash.put(blockId, new Block(blockId, newData));
+      block.data = newData;
+      response = newData;
     }
-    Optional<byte[]> response = stash.get(blockId).data;
+
+    stash.put(blockId, block);
 
     writePath(prevBlockPos);
 
