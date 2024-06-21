@@ -11,7 +11,7 @@ public class PathORAMTest {
 
   @BeforeEach
   public void setUp() {
-    pathORAM = new PathORAM();
+    pathORAM = new PathORAM(64);
   }
 
   @Test
