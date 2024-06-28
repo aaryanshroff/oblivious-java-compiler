@@ -2,8 +2,11 @@ package com.example;
 
 import org.objectweb.asm.*;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -13,19 +16,40 @@ public class MemoryAccessTransformer {
   private static int totalArrayElements = 0;
   private static Set<String> uniqueFields = new HashSet<>();
 
+  public static void main(String[] args) {
+    if (args.length != 2) {
+      System.out.println("Usage: java MemoryAccessTransformer <className> <classFilePath>");
+      System.exit(1);
+    }
+
+    String className = args[0];
+    String classFilePath = args[1];
+
+    try {
+      byte[] classBytes = Files.readAllBytes(Paths.get(classFilePath));
+      MemoryAccessTransformer.transformClass(className, classBytes);
+      System.out.println("Class " + className + " transformed and saved to target/classes directory");
+    } catch (Exception e) {
+      System.err.println("Error transforming class: " + e.getMessage());
+      e.printStackTrace();
+      System.exit(1);
+    }
+  }
+
   public static void transformClass(String className, byte[] classBytes) throws IOException {
     // First pass: count array elements and unique fields
     countArrayElementsAndFields(classBytes);
 
     // Calculate the total number of blocks needed
     int numBlocks = totalArrayElements + uniqueFields.size();
+    System.out.println("Num blocks " + numBlocks);
 
     // Initialize PathORAM with the counted number of blocks
     ORAMAccessHelper.initializeORAM(numBlocks);
 
     // Second pass: transform the class
     ClassReader classReader = new ClassReader(classBytes);
-    ClassWriter classWriter = new ClassWriter(classReader, ClassWriter.COMPUTE_FRAMES);
+    ClassWriter classWriter = new ClassWriter(classReader, 0);
     ClassVisitor classVisitor = new ClassVisitor(ASM9, classWriter) {
       @Override
       public MethodVisitor visitMethod(int access, String name, String descriptor, String signature,
@@ -117,7 +141,10 @@ public class MemoryAccessTransformer {
     };
     classReader.accept(classVisitor, 0);
     byte[] transformedClassBytes = classWriter.toByteArray();
-    try (FileOutputStream fos = new FileOutputStream("target/classes/" + className.replace('.', '/') + ".class")) {
+    String filePath = "target/classes/" + className.replace('.', '/') + ".class";
+    File file = new File(filePath);
+    file.getParentFile().mkdirs(); // Create directories if they don't exist
+    try (FileOutputStream fos = new FileOutputStream(file)) {
       fos.write(transformedClassBytes);
     }
   }
@@ -126,13 +153,15 @@ public class MemoryAccessTransformer {
     ClassReader classReader = new ClassReader(classBytes);
     ClassVisitor classVisitor = new ClassVisitor(ASM9) {
       @Override
-      public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
+      public FieldVisitor visitField(int access, String name, String descriptor,
+          String signature, Object value) {
         uniqueFields.add(name);
         return super.visitField(access, name, descriptor, signature, value);
       }
 
       @Override
-      public MethodVisitor visitMethod(int access, String name, String descriptor, String signature,
+      public MethodVisitor visitMethod(int access, String name, String descriptor,
+          String signature,
           String[] exceptions) {
         return new MethodVisitor(ASM9) {
           private int stackSize = 0;
@@ -187,9 +216,10 @@ public class MemoryAccessTransformer {
             super.visitVarInsn(opcode, var);
           }
 
+          // TODO: Multi-dimensional arrays
         };
       }
     };
-    classReader.accept(classVisitor, 0);
+    classReader.accept(classVisitor, ClassReader.EXPAND_FRAMES);
   }
 }

@@ -4,7 +4,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -14,7 +13,7 @@ public class MemoryAccessTransformerTest {
   private static Class<?> transformedClass;
 
   @BeforeAll
-  public static void setup() throws IOException {
+  public static void setup() throws Exception {
     String className = "com.example.TestClass";
     String classPath = className.replace('.', '/') + ".class";
     byte[] classBytes = Files.readAllBytes(Paths.get("target/test-classes/" + classPath));
