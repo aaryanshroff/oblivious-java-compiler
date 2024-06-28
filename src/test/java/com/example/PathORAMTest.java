@@ -67,6 +67,7 @@ public class PathORAMTest {
     });
   }
 
+  // TODO: Does size of the block data affect obliviousness?
   @Test
   public void testLargeDataBlock() {
     String blockId = "largeBlock";
