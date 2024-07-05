@@ -1,6 +1,5 @@
 import os
 import subprocess
-import zipfile
 import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
@@ -35,14 +34,6 @@ def transform_class(path_to_class_file: str, transformer_jar: str, output_dir: s
     cmd = ['java', '-jar', transformer_jar, full_class_name, path_to_class_file, output_path]
     subprocess.run(cmd)
     print(f"Transformed {path_to_class_file} into {output_path}")
-
-def process_jar(jar_path, transformer_jar, output_dir):
-    with zipfile.ZipFile(jar_path, 'r') as jar:
-        for item in jar.namelist():
-            if item.endswith('.class'):
-                jar.extract(item, output_dir)
-                class_file = os.path.join(output_dir, item)
-                transform_class(class_file, transformer_jar, output_dir, output_dir)
 
 def main(start_class: str, transformer_jar: str, input_dir: str, output_dir: str, max_workers: int) -> None:
     processed = set()
