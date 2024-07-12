@@ -17,18 +17,21 @@ public class MemoryAccessTransformer {
   private static Set<String> uniqueFields = new HashSet<>();
 
   public static void main(String[] args) {
-    if (args.length != 2) {
-      System.out.println("Usage: java MemoryAccessTransformer <className> <classFilePath>");
+    if (args.length != 3) {
+      System.out.println("Usage: java MemoryAccessTransformer <className> <classFilePath> <outputPath>");
       System.exit(1);
     }
 
     String className = args[0];
     String classFilePath = args[1];
+    String outputPath = args[2];
+
+    System.out.println(args);
 
     try {
       byte[] classBytes = Files.readAllBytes(Paths.get(classFilePath));
-      MemoryAccessTransformer.transformClass(className, classBytes);
-      System.out.println("Class " + className + " transformed and saved to target/classes directory");
+      MemoryAccessTransformer.transformClass(className, classBytes, outputPath);
+      System.out.println("Class " + className + " transformed and saved to " + outputPath);
     } catch (Exception e) {
       System.err.println("Error transforming class: " + e.getMessage());
       e.printStackTrace();
@@ -36,7 +39,7 @@ public class MemoryAccessTransformer {
     }
   }
 
-  public static void transformClass(String className, byte[] classBytes) throws IOException {
+  public static void transformClass(String className, byte[] classBytes, String outputPath) throws IOException {
     // First pass: count array elements and unique fields
     countArrayElementsAndFields(classBytes);
 
@@ -60,25 +63,111 @@ public class MemoryAccessTransformer {
           public void visitInsn(int opcode) {
             switch (opcode) {
               case IALOAD:
+                // Check if it's a 2D array access
+                mv.visitInsn(DUP2);
+                mv.visitTypeInsn(INSTANCEOF, "[[I");
+                Label labelIALOAD = new Label();
+                mv.visitJumpInsn(IFEQ, labelIALOAD);
+                // 2D array access
+                mv.visitMethodInsn(INVOKESTATIC, "com/example/ORAMAccessHelper", "readInt2DArray", "([[III)I", false);
+                mv.visitInsn(GOTO);
+                Label endIALOAD = new Label();
+                mv.visitLabel(endIALOAD);
+                mv.visitJumpInsn(GOTO, endIALOAD);
+                // 1D array access
+                mv.visitLabel(labelIALOAD);
                 mv.visitMethodInsn(INVOKESTATIC, "com/example/ORAMAccessHelper", "readIntArray", "([II)I", false);
+                mv.visitLabel(endIALOAD);
                 break;
               case IASTORE:
+                // Check if it's a 2D array access
+                mv.visitInsn(DUP2_X1);
+                mv.visitTypeInsn(INSTANCEOF, "[[I");
+                Label labelIASTORE = new Label();
+                mv.visitJumpInsn(IFEQ, labelIASTORE);
+                // 2D array access
+                mv.visitMethodInsn(INVOKESTATIC, "com/example/ORAMAccessHelper", "writeInt2DArray", "([[IIII)V", false);
+                mv.visitInsn(GOTO);
+                Label endIASTORE = new Label();
+                mv.visitLabel(endIASTORE);
+                mv.visitJumpInsn(GOTO, endIASTORE);
+                // 1D array access
+                mv.visitLabel(labelIASTORE);
                 mv.visitMethodInsn(INVOKESTATIC, "com/example/ORAMAccessHelper", "writeIntArray", "([III)V", false);
+                mv.visitLabel(endIASTORE);
                 break;
               case FALOAD:
+                // Check if it's a 2D array access
+                mv.visitInsn(DUP2);
+                mv.visitTypeInsn(INSTANCEOF, "[[F");
+                Label labelFALOAD = new Label();
+                mv.visitJumpInsn(IFEQ, labelFALOAD);
+                // 2D array access
+                mv.visitMethodInsn(INVOKESTATIC, "com/example/ORAMAccessHelper", "readFloat2DArray", "([[FII)F", false);
+                mv.visitInsn(GOTO);
+                Label endFALOAD = new Label();
+                mv.visitLabel(endFALOAD);
+                mv.visitJumpInsn(GOTO, endFALOAD);
+                // 1D array access
+                mv.visitLabel(labelFALOAD);
                 mv.visitMethodInsn(INVOKESTATIC, "com/example/ORAMAccessHelper", "readFloatArray", "([FI)F", false);
+                mv.visitLabel(endFALOAD);
                 break;
               case FASTORE:
+                // Check if it's a 2D array access
+                mv.visitInsn(DUP2_X1);
+                mv.visitTypeInsn(INSTANCEOF, "[[F");
+                Label labelFASTORE = new Label();
+                mv.visitJumpInsn(IFEQ, labelFASTORE);
+                // 2D array access
+                mv.visitMethodInsn(INVOKESTATIC, "com/example/ORAMAccessHelper", "writeFloat2DArray", "([[FIIF)V",
+                    false);
+                mv.visitInsn(GOTO);
+                Label endFASTORE = new Label();
+                mv.visitLabel(endFASTORE);
+                mv.visitJumpInsn(GOTO, endFASTORE);
+                // 1D array access
+                mv.visitLabel(labelFASTORE);
                 mv.visitMethodInsn(INVOKESTATIC, "com/example/ORAMAccessHelper", "writeFloatArray", "([FIF)V", false);
+                mv.visitLabel(endFASTORE);
                 break;
               case AALOAD:
+                // Check if it's a 2D array access
+                mv.visitInsn(DUP2);
+                mv.visitTypeInsn(INSTANCEOF, "[[Ljava/lang/Object;");
+                Label labelAALOAD = new Label();
+                mv.visitJumpInsn(IFEQ, labelAALOAD);
+                // 2D array access
+                mv.visitMethodInsn(INVOKESTATIC, "com/example/ORAMAccessHelper", "readObject2DArray",
+                    "([[Ljava/lang/Object;II)Ljava/lang/Object;", false);
+                mv.visitInsn(GOTO);
+                Label endAALOAD = new Label();
+                mv.visitLabel(endAALOAD);
+                mv.visitJumpInsn(GOTO, endAALOAD);
+                // 1D array access
+                mv.visitLabel(labelAALOAD);
                 mv.visitMethodInsn(INVOKESTATIC, "com/example/ORAMAccessHelper", "readObjectArray",
                     "([Ljava/lang/Object;I)Ljava/lang/Object;", false);
-                mv.visitTypeInsn(CHECKCAST, "java/lang/String");
+                mv.visitLabel(endAALOAD);
                 break;
               case AASTORE:
+                // Check if it's a 2D array access
+                mv.visitInsn(DUP2_X1);
+                mv.visitTypeInsn(INSTANCEOF, "[[Ljava/lang/Object;");
+                Label labelAASTORE = new Label();
+                mv.visitJumpInsn(IFEQ, labelAASTORE);
+                // 2D array access
+                mv.visitMethodInsn(INVOKESTATIC, "com/example/ORAMAccessHelper", "writeObject2DArray",
+                    "([[Ljava/lang/Object;IILjava/lang/Object;)V", false);
+                mv.visitInsn(GOTO);
+                Label endAASTORE = new Label();
+                mv.visitLabel(endAASTORE);
+                mv.visitJumpInsn(GOTO, endAASTORE);
+                // 1D array access
+                mv.visitLabel(labelAASTORE);
                 mv.visitMethodInsn(INVOKESTATIC, "com/example/ORAMAccessHelper", "writeObjectArray",
                     "([Ljava/lang/Object;ILjava/lang/Object;)V", false);
+                mv.visitLabel(endAASTORE);
                 break;
               default:
                 super.visitInsn(opcode);
@@ -141,9 +230,7 @@ public class MemoryAccessTransformer {
     };
     classReader.accept(classVisitor, 0);
     byte[] transformedClassBytes = classWriter.toByteArray();
-    String filePath = "target/classes/" + className.replace('.', '/') + ".class";
-    File file = new File(filePath);
-    file.getParentFile().mkdirs(); // Create directories if they don't exist
+    File file = new File(outputPath);
     try (FileOutputStream fos = new FileOutputStream(file)) {
       fos.write(transformedClassBytes);
     }
