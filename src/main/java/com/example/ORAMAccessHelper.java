@@ -69,6 +69,31 @@ public class ORAMAccessHelper {
     writeValue(obj, fieldName, value != null ? value.getBytes() : new byte[0]);
   }
 
+  // 2D array access methods
+  public static int readInt2DArray(int[][] array, int row, int col) {
+    return readValue(array, row + "_" + col, bytes -> ByteBuffer.wrap(bytes).getInt(), 0);
+  }
+
+  public static void writeInt2DArray(int[][] array, int row, int col, int value) {
+    writeValue(array, row + "_" + col, ByteBuffer.allocate(4).putInt(value).array());
+  }
+
+  public static float readFloat2DArray(float[][] array, int row, int col) {
+    return readValue(array, row + "_" + col, bytes -> ByteBuffer.wrap(bytes).getFloat(), 0f);
+  }
+
+  public static void writeFloat2DArray(float[][] array, int row, int col, float value) {
+    writeValue(array, row + "_" + col, ByteBuffer.allocate(4).putFloat(value).array());
+  }
+
+  public static Object readObject2DArray(Object[][] array, int row, int col) {
+    return readValue(array, row + "_" + col, ORAMAccessHelper::deserializeObject, null);
+  }
+
+  public static void writeObject2DArray(Object[][] array, int row, int col, Object value) {
+    writeValue(array, row + "_" + col, serializeObject(value));
+  }
+
   private static byte[] serializeObject(Object obj) {
     try (ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream(bos)) {
